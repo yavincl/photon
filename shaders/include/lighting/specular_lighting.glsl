@@ -252,14 +252,15 @@ vec3 get_specular_reflections(
 
 #if defined SSR_ROUGHNESS_SUPPORT && defined SPECULAR_MAPPING
 	if (!is_water) { // Rough reflection
-	 	float mip_level = min(8.0 * (1.0 - pow8(1.0 - material.roughness)), 5.0);
+                float mip_level = min(8.0 * (1.0 - pow8(1.0 - material.roughness)), 5.0);
 
-		vec3 reflection = vec3(0.0);
+                int   ray_count = max(1, int(float(SSR_RAY_COUNT) * (1.0 - material.roughness)));
+                vec3  reflection = vec3(0.0);
 
-		for (int i = 0; i < SSR_RAY_COUNT; ++i) {
-			vec2 hash;
-			hash.x = interleaved_gradient_noise(gl_FragCoord.xy,                    frameCounter * SSR_RAY_COUNT + i);
-			hash.y = interleaved_gradient_noise(gl_FragCoord.xy + vec2(97.0, 23.0), frameCounter * SSR_RAY_COUNT + i);
+                for (int i = 0; i < ray_count; ++i) {
+                        vec2 hash;
+                        hash.x = interleaved_gradient_noise(gl_FragCoord.xy,                    frameCounter * ray_count + i);
+                        hash.y = interleaved_gradient_noise(gl_FragCoord.xy + vec2(97.0, 23.0), frameCounter * ray_count + i);
 
 			vec3 microfacet_normal = tbn_matrix * sample_ggx_vndf(-tangent_dir, vec2(material.roughness), hash);
 			vec3 ray_dir = reflect(world_dir, microfacet_normal);
@@ -287,7 +288,7 @@ vec3 get_specular_reflections(
 			reflection += radiance * fresnel * (2.0 * NoL * v2 / v1);
 		}
 
-		reflection *= albedo_tint * rcp(float(SSR_RAY_COUNT));
+                reflection *= albedo_tint * rcp(float(ray_count));
 		if (any(isnan(reflection))) reflection = vec3(0.0); // don't reflect NaNs
 		return reflection * material.ssr_multiplier;
 	}
