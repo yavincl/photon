@@ -9,6 +9,10 @@
 #include "/include/utility/random.glsl"
 #include "/include/utility/rotation.glsl"
 
+#ifdef PRECOMPUTED_PCF_OFFSETS
+uniform vec2 precomputed_pcf_offsets[9];
+#endif
+
 #define SHADOW_PCF_STEPS_MIN           6 // [4 6 8 12 16 18 20 22 24 26 28 30 32]
 #define SHADOW_PCF_STEPS_MAX          12 // [4 6 8 12 16 18 20 22 24 26 28 30 32]
 #define SHADOW_PCF_STEPS_SCALE       1.0 // [0.0 0.2 0.4 0.6 0.8 1.0 1.2 1.4 1.6 1.8 2.0]
@@ -60,23 +64,35 @@ float lightmap_shadows(float skylight, float NoL) {
 
 #ifdef SHADOW
 vec2 blocker_search(vec3 scene_pos, float dither, bool has_sss) {
-	uint step_count = has_sss ? 12u : 3u;
+        uint step_count = has_sss ? 12u : 3u;
 
 	vec3 shadow_view_pos = transform(shadowModelView, scene_pos);
 	vec3 shadow_clip_pos = project_ortho(shadowProjection, shadow_view_pos);
 	float ref_z = shadow_clip_pos.z * (SHADOW_DEPTH_SCALE * 0.5) + 0.5;
 
 	float radius = SHADOW_BLOCKER_SEARCH_RADIUS * shadowProjection[0].x * (0.5 + 0.5 * linear_step(0.2, 0.4, light_dir.y));
-	mat2 rotate_and_scale = get_rotation_matrix(tau * dither) * radius;
+        mat2 rotate_and_scale = get_rotation_matrix(tau * dither) * radius;
+
+#ifndef PRECOMPUTED_PCF_OFFSETS
+        vec2 pcf_offsets[9];
+        for (uint j = 0u; j < 9u; ++j) {
+                pcf_offsets[j] = rotate_and_scale * blue_noise_disk[j];
+        }
+#endif
 
 	float depth_sum = 0.0;
 	float weight_sum = 0.0;
 	float depth_sum_sss = 0.0;
 
-	for (uint i = 0; i < step_count; ++i) {
-		vec2 uv  = shadow_clip_pos.xy + rotate_and_scale * blue_noise_disk[i];
-		     uv /= get_distortion_factor(uv);
-		     uv  = uv * 0.5 + 0.5;
+        for (uint i = 0u; i < step_count; ++i) {
+#ifdef PRECOMPUTED_PCF_OFFSETS
+                vec2 offset = i < 9u ? precomputed_pcf_offsets[i] : rotate_and_scale * blue_noise_disk[i];
+#else
+                vec2 offset = i < 9u ? pcf_offsets[i] : rotate_and_scale * blue_noise_disk[i];
+#endif
+                vec2 uv  = shadow_clip_pos.xy + offset;
+                     uv /= get_distortion_factor(uv);
+                     uv  = uv * 0.5 + 0.5;
 
 		float depth  = texelFetch(shadowtex0, ivec2(uv * shadow_map_res), 0).x;
 		float weight = step(depth, ref_z);
@@ -127,7 +143,14 @@ vec3 shadow_pcf(
 	uint step_count = uint(SHADOW_PCF_STEPS_MIN + SHADOW_PCF_STEPS_SCALE * filter_scale);
 	     step_count = min(step_count, SHADOW_PCF_STEPS_MAX);
 
-	mat2 rotate_and_scale = get_rotation_matrix(tau * dither) * filter_radius;
+        mat2 rotate_and_scale = get_rotation_matrix(tau * dither) * filter_radius;
+
+#ifndef PRECOMPUTED_PCF_OFFSETS
+        vec2 pcf_offsets[9];
+        for (uint j = 0u; j < 9u; ++j) {
+                pcf_offsets[j] = rotate_and_scale * blue_noise_disk[j];
+        }
+#endif
 
 	float shadow = 0.0;
 
@@ -135,8 +158,12 @@ vec3 shadow_pcf(
 	float weight_sum = 0.0;
 
 	// perform first 4 iterations and filter shadow color
-	for (uint i = 0; i < 4; ++i) {
-		vec2 offset = rotate_and_scale * blue_noise_disk[i];
+        for (uint i = 0u; i < 4u; ++i) {
+#ifdef PRECOMPUTED_PCF_OFFSETS
+                vec2 offset = i < 9u ? precomputed_pcf_offsets[i] : rotate_and_scale * blue_noise_disk[i];
+#else
+                vec2 offset = i < 9u ? pcf_offsets[i] : rotate_and_scale * blue_noise_disk[i];
+#endif
 
 		vec2 uv  = shadow_clip_pos.xy + offset;
 		     uv /= get_distortion_factor(uv);
@@ -166,8 +193,12 @@ vec3 shadow_pcf(
 	else if (shadow < eps) return vec3(0.0);
 
 	// perform remaining iterations
-	for (uint i = 4; i < step_count; ++i) {
-		vec2 offset = rotate_and_scale * blue_noise_disk[i];
+        for (uint i = 4u; i < step_count; ++i) {
+#ifdef PRECOMPUTED_PCF_OFFSETS
+                vec2 offset = i < 9u ? precomputed_pcf_offsets[i] : rotate_and_scale * blue_noise_disk[i];
+#else
+                vec2 offset = i < 9u ? pcf_offsets[i] : rotate_and_scale * blue_noise_disk[i];
+#endif
 
 		vec2 uv  = shadow_clip_pos.xy + offset;
 		     uv /= get_distortion_factor(uv);
