@@ -45,6 +45,11 @@
 * Iris - version 1.5 and above
 * OptiFine - on Minecraft 1.16.5 and above
 * Photon is also compatible with [Distant Horizons](https://www.curseforge.com/minecraft/mc-mods/distant-horizons) (as of writing this requires a special version of Iris and Distant Horizons which is available in the Iris installer)
+## precomputing skylight SH
+Photon now expects spherical-harmonic coefficients for skylight as a uniform.
+Use `scripts/generate_skylight_sh.py` to compute these coefficients from a sky map and upload them to the `u_sky_sh` uniform before rendering.
+Define `SKY_SH_LEGACY` to revert to the old in-shader sampling path.
+
 
 ## showcase videos
 
