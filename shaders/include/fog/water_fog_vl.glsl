@@ -109,10 +109,8 @@ mat2x3 raymarch_water_fog(
 			sky_transmittance = sqrt(sky_transmittance);
 		}
 
-                transmittance *= step_transmittance;
-
-                if (max_of(transmittance) < 0.01) break;
-        }
+		transmittance *= step_transmittance;
+	}
 
 	scattering *= (1.0 - step_transmittance) * scattering_coeff / extinction_coeff;
 	transmittance = pow(transmittance, vec3(0.75));
