@@ -69,25 +69,32 @@ vec2 blocker_search(vec3 scene_pos, float dither, bool has_sss) {
 	float radius = SHADOW_BLOCKER_SEARCH_RADIUS * shadowProjection[0].x * (0.5 + 0.5 * linear_step(0.2, 0.4, light_dir.y));
 	mat2 rotate_and_scale = get_rotation_matrix(tau * dither) * radius;
 
-	float depth_sum = 0.0;
-	float weight_sum = 0.0;
-	float depth_sum_sss = 0.0;
+        float depth_sum = 0.0;
+        float weight_sum = 0.0;
+        float depth_sum_sss = 0.0;
 
-	for (uint i = 0; i < step_count; ++i) {
-		vec2 uv  = shadow_clip_pos.xy + rotate_and_scale * blue_noise_disk[i];
-		     uv /= get_distortion_factor(uv);
-		     uv  = uv * 0.5 + 0.5;
+        for (uint i = 0; i < step_count; ++i) {
+                vec2 uv  = shadow_clip_pos.xy + rotate_and_scale * blue_noise_disk[i];
+                     uv /= get_distortion_factor(uv);
+                     uv  = uv * 0.5 + 0.5;
 
-		float depth  = texelFetch(shadowtex0, ivec2(uv * shadow_map_res), 0).x;
-		float weight = step(depth, ref_z);
+                float depth  = texelFetch(shadowtex0, ivec2(uv * shadow_map_res), 0).x;
+                float weight = step(depth, ref_z);
 
-		depth_sum    += weight * depth;
-		weight_sum   += weight;
-		depth_sum_sss += max0(ref_z - depth);
-	}
+                depth_sum    += weight * depth;
+                weight_sum   += weight;
+                depth_sum_sss += max0(ref_z - depth);
 
-	float blocker_depth = weight_sum == 0.0 ? 0.0 : depth_sum / weight_sum;
-	float sss_depth = -shadowProjectionInverse[2].z * depth_sum_sss * rcp(SHADOW_DEPTH_SCALE * float(step_count));
+                if (weight_sum == float(step_count)) break;
+        }
+
+        float truncated_weight_sum = weight_sum;
+
+        float blocker_depth = truncated_weight_sum == 0.0 ? 0.0 : depth_sum / truncated_weight_sum;
+        float sss_depth = truncated_weight_sum == 0.0 ?
+                0.0 :
+                -shadowProjectionInverse[2].z * depth_sum_sss /
+                        (SHADOW_DEPTH_SCALE * truncated_weight_sum);
 
 	return vec2(blocker_depth, sss_depth);
 }
