@@ -205,8 +205,7 @@ CloudsResult draw_altocumulus_clouds(
 	//   Raymarching Loop
 	// --------------------
 
-	for (uint i = 0u; i < primary_steps; ++i) {
-		if (transmittance < min_transmittance) break;
+        for (uint i = 0u; i < primary_steps; ++i) {
 
 		vec3 ray_pos = ray_origin + ray_step * i;
 
@@ -247,7 +246,9 @@ CloudsResult draw_altocumulus_clouds(
 			bounced_light
 		) * transmittance;
 
-		transmittance *= step_transmittance;
+                transmittance *= step_transmittance;
+
+                if (transmittance < 0.01) break;
 
 		// Update distance to cloud
 		distance_sum += distance_to_sample * density;
