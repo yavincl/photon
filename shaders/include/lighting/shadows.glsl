@@ -129,22 +129,30 @@ vec3 shadow_pcf(
 
 	mat2 rotate_and_scale = get_rotation_matrix(tau * dither) * filter_radius;
 
-	float shadow = 0.0;
+        float shadow = 0.0;
 
-	vec3 color_sum = vec3(0.0);
-	float weight_sum = 0.0;
+        uint lit_samples = 0u;
+        uint shadow_samples = 0u;
+        uint samples_taken = 0u;
+
+        vec3 color_sum = vec3(0.0);
+        float weight_sum = 0.0;
 
 	// perform first 4 iterations and filter shadow color
-	for (uint i = 0; i < 4; ++i) {
-		vec2 offset = rotate_and_scale * blue_noise_disk[i];
+        for (uint i = 0; i < 4; ++i) {
+                vec2 offset = rotate_and_scale * blue_noise_disk[i];
 
-		vec2 uv  = shadow_clip_pos.xy + offset;
-		     uv /= get_distortion_factor(uv);
-		     uv  = uv * 0.5 + 0.5;
+                vec2 uv  = shadow_clip_pos.xy + offset;
+                     uv /= get_distortion_factor(uv);
+                     uv  = uv * 0.5 + 0.5;
 
-		ivec2 texel = ivec2(uv * shadow_map_res);
+                ivec2 texel = ivec2(uv * shadow_map_res);
 
-		shadow += texture(shadowtex1, vec3(uv, shadow_screen_pos.z));
+                float sample = texture(shadowtex1, vec3(uv, shadow_screen_pos.z));
+                shadow += sample;
+                samples_taken += 1u;
+                lit_samples += uint(sample > 0.5);
+                shadow_samples = samples_taken - lit_samples;
 
 #ifdef SHADOW_COLOR
 		float depth = texelFetch(shadowtex0, texel, 0).x;
@@ -159,24 +167,32 @@ vec3 shadow_pcf(
 #endif
 	}
 
-	vec3 color = weight_sum > 0.0 ? color_sum * rcp(weight_sum) : vec3(1.0);
+        vec3 color = weight_sum > 0.0 ? color_sum * rcp(weight_sum) : vec3(1.0);
 
-	// exit early if outside shadow
-	if (shadow > 4.0 - eps) return color;
-	else if (shadow < eps) return vec3(0.0);
+        // exit early if outside shadow
+        if (shadow > float(samples_taken) - eps) return color;
+        else if (shadow < eps) return vec3(0.0);
 
-	// perform remaining iterations
-	for (uint i = 4; i < step_count; ++i) {
-		vec2 offset = rotate_and_scale * blue_noise_disk[i];
+        // perform remaining iterations
+        for (uint i = 4; i < step_count; ++i) {
+                vec2 offset = rotate_and_scale * blue_noise_disk[i];
 
-		vec2 uv  = shadow_clip_pos.xy + offset;
-		     uv /= get_distortion_factor(uv);
-		     uv  = uv * 0.5 + 0.5;
+                vec2 uv  = shadow_clip_pos.xy + offset;
+                     uv /= get_distortion_factor(uv);
+                     uv  = uv * 0.5 + 0.5;
 
-		shadow += texture(shadowtex1, vec3(uv, shadow_screen_pos.z));
-	}
+                float sample = texture(shadowtex1, vec3(uv, shadow_screen_pos.z));
+                shadow += sample;
+                samples_taken += 1u;
+                lit_samples += uint(sample > 0.5);
+                shadow_samples = samples_taken - lit_samples;
 
-	float rcp_steps = rcp(float(step_count));
+                if (shadow < eps || shadow >= float(step_count) - eps) {
+                        break;
+                }
+        }
+
+        float rcp_steps = rcp(float(samples_taken));
 
 	// sharpening for small penumbra sizes
 	float sharpening_threshold = 0.4 * max0((min_filter_radius - penumbra_size) / min_filter_radius);
