@@ -6,6 +6,7 @@
 #include "/include/utility/space_conversion.glsl"
 
 #define SSAO_MAX_RADIUS_SCREEN 0.05
+#define SSAO_STEPS_MIN 4
 
 vec2 get_ssao_sample_offset(int step_index, vec2 dither) {
 	float a = (float(step_index) + dither.x) * rcp(float(SSAO_STEPS));
@@ -43,12 +44,14 @@ float compute_ssao(
 		) 
 	);
 
-	float ao = 0.0; 
+        uint step_count = uint(clamp(int(length(position_view)), SSAO_STEPS_MIN, SSAO_STEPS));
 
-	for (int i = 0; i < SSAO_STEPS; ++i) {
-		vec2 sample_uv = clamp01(
-			position_screen.xy + sample_matrix * get_ssao_sample_offset(i, dither)
-		);
+        float ao = 0.0;
+
+        for (uint i = 0u; i < step_count; ++i) {
+                vec2 sample_uv = clamp01(
+                        position_screen.xy + sample_matrix * get_ssao_sample_offset(i, dither)
+                );
 
 		ivec2 texel = ivec2(sample_uv * view_res * taau_render_scale + 0.5);
 		float depth = texelFetch(combined_depth_buffer, texel, 0).x;
@@ -65,10 +68,10 @@ float compute_ssao(
 		float cos_theta = clamp01(dot(offset_view, normal_view) * rlen);
 		float distance_falloff = rcp(1.0 + rcp(rlen) * rcp(float(SSAO_RADIUS)));
 
-		ao += cos_theta * distance_falloff;
-	}
+                ao += cos_theta * distance_falloff;
+        }
 
-	return cube(clamp01(1.0 - ao * rcp(float(SSAO_STEPS))));
+        return cube(clamp01(1.0 - ao * rcp(float(step_count))));
 }
 
 #endif // INCLUDE_LIGHTING_AO_SSAO
