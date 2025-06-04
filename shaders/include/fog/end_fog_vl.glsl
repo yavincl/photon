@@ -154,8 +154,10 @@ mat2x3 raymarch_end_fog(
 		scattering += 4.0 * end_fog_emission(world_pos) * step_length * transmittance;
 #endif
 
-		transmittance *= step_transmittance;
-	}
+                transmittance *= step_transmittance;
+
+                if (max_of(transmittance) < 0.01) break;
+        }
 
 	scattering *= scattering_coeff;
 	transmittance = pow(transmittance, vec3(0.75));

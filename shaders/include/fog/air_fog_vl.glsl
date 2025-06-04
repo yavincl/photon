@@ -95,7 +95,7 @@ mat2x3 raymarch_air_fog(vec3 world_start_pos, vec3 world_end_pos, bool sky, floa
 	mat2x3 light_sun = mat2x3(0.0); // Rayleigh, mie
 	mat2x3 light_sky = mat2x3(0.0); // Rayleigh, mie
 
-	for (int i = 0; i < step_count; ++i, world_pos += world_step, shadow_pos += shadow_step) {
+        for (int i = 0; i < step_count; ++i, world_pos += world_step, shadow_pos += shadow_step) {
 		vec3 shadow_screen_pos = distort_shadow_space(shadow_pos) * 0.5 + 0.5;
 
 #if defined SHADOW && !defined PROGRAM_DEFERRED0
@@ -132,8 +132,10 @@ mat2x3 raymarch_air_fog(vec3 world_start_pos, vec3 world_end_pos, bool sky, floa
 		light_sky[0] += visible_scattering * density.x;
 		light_sky[1] += visible_scattering * density.y;
 
-		transmittance *= step_transmittance;
-	}
+                transmittance *= step_transmittance;
+
+                if (max_of(transmittance) < 0.01) break;
+        }
 
 	light_sun[0] *= air_fog_coeff[0][0];
 	light_sun[1] *= air_fog_coeff[0][1];

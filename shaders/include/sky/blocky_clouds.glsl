@@ -222,8 +222,7 @@ vec4 raymarch_blocky_clouds(
 	//   Raymarching Loop
 	// --------------------
 
-	for (uint i = 0u; i < primary_steps; ++i, world_pos += world_step) {
-		if (transmittance < min_transmittance) break;
+        for (uint i = 0u; i < primary_steps; ++i, world_pos += world_step) {
 
 		float altitude_fraction = (world_pos.y - layer_altitude) * rcp(blocky_clouds_thickness);
 
@@ -247,7 +246,9 @@ vec4 raymarch_blocky_clouds(
 			bounced_light
 		) * transmittance * mix(0.8, 1.25, cubic_smooth(altitude_fraction));
 
-		transmittance *= step_transmittance;
+                transmittance *= step_transmittance;
+
+                if (transmittance < 0.01) break;
 
 		// Update distance to cloud
 		float distance_to_sample = distance(cameraPosition, world_pos);
