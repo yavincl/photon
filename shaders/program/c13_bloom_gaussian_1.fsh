@@ -71,15 +71,55 @@ void main() {
 
 	// Vertical 9-tap gaussian blur
 
-	bloom_tiles = vec3(0.0);
-	float weight_sum = 0.0;
+        bloom_tiles = vec3(0.0);
+        float weight_sum = 0.0;
 
-	for (int i = -4; i <= 4; ++i) {
-		ivec2 pos    = texel + ivec2(0, i);
-		float weight = binomial_weights_9[abs(i)] * float(clamp(pos.y, bounds_min.y + 2, bounds_max.y - 2) == pos.y);
-		bloom_tiles  += texelFetch(colortex0, pos, 0).rgb * weight;
-		weight_sum   += weight;
-	}
+        {
+                ivec2 pos = texel + ivec2(0, -4);
+                float weight = binomial_weights_9[4] * float(clamp(pos.y, bounds_min.y + 2, bounds_max.y - 2) == pos.y);
+                bloom_tiles += texelFetch(colortex0, pos, 0).rgb * weight;
+                weight_sum  += weight;
+
+                pos = texel + ivec2(0, -3);
+                weight = binomial_weights_9[3] * float(clamp(pos.y, bounds_min.y + 2, bounds_max.y - 2) == pos.y);
+                bloom_tiles += texelFetch(colortex0, pos, 0).rgb * weight;
+                weight_sum  += weight;
+
+                pos = texel + ivec2(0, -2);
+                weight = binomial_weights_9[2] * float(clamp(pos.y, bounds_min.y + 2, bounds_max.y - 2) == pos.y);
+                bloom_tiles += texelFetch(colortex0, pos, 0).rgb * weight;
+                weight_sum  += weight;
+
+                pos = texel + ivec2(0, -1);
+                weight = binomial_weights_9[1] * float(clamp(pos.y, bounds_min.y + 2, bounds_max.y - 2) == pos.y);
+                bloom_tiles += texelFetch(colortex0, pos, 0).rgb * weight;
+                weight_sum  += weight;
+
+                pos = texel + ivec2(0, 0);
+                weight = binomial_weights_9[0] * float(clamp(pos.y, bounds_min.y + 2, bounds_max.y - 2) == pos.y);
+                bloom_tiles += texelFetch(colortex0, pos, 0).rgb * weight;
+                weight_sum  += weight;
+
+                pos = texel + ivec2(0, 1);
+                weight = binomial_weights_9[1] * float(clamp(pos.y, bounds_min.y + 2, bounds_max.y - 2) == pos.y);
+                bloom_tiles += texelFetch(colortex0, pos, 0).rgb * weight;
+                weight_sum  += weight;
+
+                pos = texel + ivec2(0, 2);
+                weight = binomial_weights_9[2] * float(clamp(pos.y, bounds_min.y + 2, bounds_max.y - 2) == pos.y);
+                bloom_tiles += texelFetch(colortex0, pos, 0).rgb * weight;
+                weight_sum  += weight;
+
+                pos = texel + ivec2(0, 3);
+                weight = binomial_weights_9[3] * float(clamp(pos.y, bounds_min.y + 2, bounds_max.y - 2) == pos.y);
+                bloom_tiles += texelFetch(colortex0, pos, 0).rgb * weight;
+                weight_sum  += weight;
+
+                pos = texel + ivec2(0, 4);
+                weight = binomial_weights_9[4] * float(clamp(pos.y, bounds_min.y + 2, bounds_max.y - 2) == pos.y);
+                bloom_tiles += texelFetch(colortex0, pos, 0).rgb * weight;
+                weight_sum  += weight;
+        }
 
 	bloom_tiles /= weight_sum;
 }
